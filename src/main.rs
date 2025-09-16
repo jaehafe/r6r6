@@ -13,26 +13,27 @@ async fn main() {
     //     });
     // }
 
+
+
     // futures
-    stream::iter(0..100)
+    stream::iter(0..1000)
         .map(|i| {
-        let client = client.clone();
+            let client = client.clone();
         async move {
             println!("Hello from task {}", i);
-            match client.get("http://localhost:8080").send().await {
+            let resp = client.get("http://localhost:8080").send().await;
+            match resp {
                 Ok(resp) => {
                     let status = resp.status();
                     let body = resp.text().await.unwrap_or_else(|_| String::new());
                     println!("Task {} got response: {} - {}", i, status, body);
                 }
-                Err(e) => {
-                    println!("Task {} encountered an error: {}", i, e);
-                }
+                Err(e) => println!("Task {} encountered an error: {}", i, e)
             }
 
         }
         })
-        .buffer_unordered(1)
+        .buffer_unordered(100)
         .for_each(|_| async { }).await;
 
     // println!("🚀 Futures 병렬 처리 예제들\n");
