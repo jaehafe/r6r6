@@ -3,25 +3,33 @@ use reqwest::Client;
 
 #[tokio::main]
 async fn main() {
+    async fn foo() -> i32 {
+        42
+    }
+    let fut = foo().await;
+    // let result = fut.await;
+    println!("{}", fut);
+
     let client = Client::new();
 
-    stream::iter(0..1000)
+    let make_request = |i: i32, client: Client| async move {
+        println!("Hello from task {}", i);
+        let resp = client.get("http://localhost:8080").send().await;
+        match resp {
+            Ok(resp) => {
+                let status = resp.status();
+                let body = resp.text().await.unwrap_or_else(|_| String::new());
+                println!("Task {} got response: {} - {}", i, status, body);
+            }
+            Err(e) => println!("Task {} encountered an error: {}", i, e)
+        }
+    };
+
+    stream::iter(0..10)
         .map(|i| {
             let client = client.clone();
-            async move {
-                println!("Hello from task {}", i);
-                let resp = client.get("http://localhost:8080").send().await;
-                match resp {
-                    Ok(resp) => {
-                        let status = resp.status();
-                        let body = resp.text().await.unwrap_or_else(|_| String::new());
-                        println!("Task {} got response: {} - {}", i, status, body);
-                    }
-                    Err(e) => println!("Task {} encountered an error: {}", i, e)
-                }
-
-            }
+            make_request(i, client)
         })
-        .buffer_unordered(100)
+        .buffer_unordered(5)
         .for_each(|_| async { }).await;
 }
