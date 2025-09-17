@@ -4,9 +4,10 @@ use r6r6::parallel_examples::*;
 async fn main() {
 
     for i in 0..100 {
-        tokio::spawn(async move {
+        let handle = async move {
             println!("Hello from task {}", i);
-        });
+        };
+        tokio::spawn(handle).await.unwrap();
     }
 
     println!("🚀 Futures 병렬 처리 예제들\n");
